@@ -70,6 +70,24 @@ describe('QuickTask workflow', () => {
     expect(window.localStorage.getItem('quicktask.tasks')).toBe('[]');
   });
 
+  it('shows empty state and zero counts when no saved value exists', () => {
+    window.localStorage.removeItem('quicktask.tasks');
+    render(<App />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('No tasks yet. Add your first task!');
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    expect(screen.getAllByText('0', { selector: '.summary-number' })).toHaveLength(2);
+  });
+
+  it('shows empty state and zero counts when valid saved JSON is not an array', () => {
+    window.localStorage.setItem('quicktask.tasks', JSON.stringify({ text: 'Not a task list' }));
+    render(<App />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('No tasks yet. Add your first task!');
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    expect(screen.getAllByText('0', { selector: '.summary-number' })).toHaveLength(2);
+  });
+
   it('restores valid saved tasks and safely ignores malformed stored data', () => {
     window.localStorage.setItem(
       'quicktask.tasks',
@@ -110,10 +128,12 @@ describe('QuickTask workflow', () => {
       throw new Error('Storage unavailable');
     };
 
-    expect(() => render(<App />)).not.toThrow();
-    expect(screen.getByRole('status')).toBeInTheDocument();
-
-    window.Storage.prototype.getItem = getItem;
-    window.Storage.prototype.setItem = setItem;
+    try {
+      expect(() => render(<App />)).not.toThrow();
+      expect(screen.getByRole('status')).toBeInTheDocument();
+    } finally {
+      window.Storage.prototype.getItem = getItem;
+      window.Storage.prototype.setItem = setItem;
+    }
   });
 });
